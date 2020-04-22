@@ -34,7 +34,7 @@ function Invoke-Accelo{
             uri = $newuri.Uri.OriginalString
         }
         if ($body) {
-            $invokeSplat.add('Body', $body)
+            $invokeSplat.add('body', $body)
         }
         write-verbose "Invocation: uri($uri)"
         write-verbose "Invocation: method($method)"
@@ -117,7 +117,6 @@ function Get-AcceloCompanies {
             }
         }
         $headers = @{
-            "Content-Type" = "application/json"
             "Authorization" = "Bearer $token"
         }
         $query = @{"_filters" = $filters; "_fields" = $fields}
@@ -141,7 +140,7 @@ function Get-AcceloRequests {
         [string]$token,
 
         [Parameter(Mandatory=$true, ParameterSetName="GetRequestById")]
-        [string]$requestId,
+        [string]$id,
 
         [Parameter()]
         [string]$filters,
@@ -158,7 +157,7 @@ function Get-AcceloRequests {
             }
 
             'GetRequestById' {
-                $uriObject.path = "$($uriObject.path)/requests/$requestId"
+                $uriObject.path = "$($uriObject.path)/requests/$id"
             }
 
             Default {
@@ -166,7 +165,6 @@ function Get-AcceloRequests {
             }
         }
         $headers = @{
-            "Content-Type" = "application/json"
             "Authorization" = "Bearer $token"
         }
         $query = @{"_filters" = $filters; "_fields" = $fields}
@@ -197,7 +195,13 @@ function Add-AcceloRequest {
         [string]$typeId,
 
         [Parameter(Mandatory=$true, ParameterSetName="AddRequest")]
-        [string]$title
+        [string]$title,
+
+        [Parameter(Mandatory=$true, ParameterSetName="AddRequest")]
+        [string]$affiliationId,
+
+        [Parameter(Mandatory=$true, ParameterSetName="AddRequest")]
+        [string]$body
 
     )
     
@@ -205,17 +209,16 @@ function Add-AcceloRequest {
         $uriObject = [System.Uribuilder]$uri
         $uriObject.path = "$($uriObject.path)/requests"
         $headers = @{
-            "Content-Type" = "application/json"
             "Authorization" = "Bearer $token"
         }
     }
     
     process {
         $acceloRequest = @{
-            type_id = "4"
-            body = "Test Subject"
-            title = "Test Title"
-            affiliation = "88"
+            type_id = $typeId
+            title = $title
+            body = $body
+            affiliation_id = $affiliationId
         }
 
         $request = (Invoke-Accelo -headers $headers -method "POST" -uri $uriObject -body $acceloRequest).response
@@ -264,7 +267,6 @@ function Get-AcceloAffiliations {
         }
         $query = @{"_filters" = $filters; "_fields" = $fields}
         $headers = @{
-            "Content-Type" = "application/json"
             "Authorization" = "Bearer $token"
         }
     }

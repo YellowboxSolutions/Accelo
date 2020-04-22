@@ -130,13 +130,8 @@ Describe "Add-AcceloRequest" {
         $testRequestSplat = @{
             typeId = "4"
             title = "Test Title"    
-            # affiliation = "88"
-            # affiliation_company_name = "Yellowbox Solutions"
-            # affiliation_company_phone = "2562739272"
-            # affiliation_contact_firstname = "Ken"
-            # affiliation_contact_surname = "Mitchell"
-            # affiliation_email = "dummy@ken-mitchell.com"
-            # affiliation_phone = "2562739272"
+            affiliationId = "88"
+            body = "Test body"
         }
         It "Should return a valid request" {
             Add-AcceloRequest -uri $testuri -token $token @testRequestSplat|
