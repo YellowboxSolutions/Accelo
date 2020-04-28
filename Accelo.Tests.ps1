@@ -9,6 +9,55 @@ $testpass = ConvertTo-SecureString -string "testpass" -AsPlainText -Force
 $testcred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $testuser,$testpass
 $testuri = "https://example.com/sdf"
 $testtoken = "testtokencontent"
+$testscope = "read(all)"
+$testdeployment = "test1"
+$testendpoint = "testend1"
+$testUriTemplate = "https://<deployment>.example.com/<endpoint>"
+
+Describe "Get-AcceloUri" {
+    Context "Get API URI" {
+        It "It returns valid api uri" {
+            $uri = Get-AcceloUri -template $testUriTemplate -deployment $testdeployment -endpoint $testendpoint
+            $uri | Should -BeLike "*$testdeployment.*$testendpoint"
+        }
+    }
+}
+Describe "Connect-Accelo" {
+    BeforeAll{
+        Mock Invoke-WebRequest -modulename Accelo -Verifiable{
+            $content = @{
+                method = [string]$method
+                headers = [hashtable]$headers
+                uri = [string]$uri
+            }
+            $content = $content|ConvertTo-Json
+            write-verbose "Mock response content: $content"
+            $request = @{
+                content = $content
+            }
+            if ($SessionVariable) {
+                $session = @{
+                    Headers = $($content.headers)
+                    method = $($content.method)
+                }
+                $global:AcceloSession = New-Object -TypeName "Microsoft.Powershell.Commands.WebRequestSession"
+            }
+            $request
+        }
+        $response = Connect-Accelo -deployment $testdeployment -scope $testscope -credential $testcred
+        $response
+    }
+    Context "Connect with Username and Password" {
+        It "Returns expected content from body" {
+            $($response.headers.authorization) |
+            Should -belike "Bearer *"
+        }
+        It "Sets a global session var global:AcceloSession" {
+            $global:AcceloSession|
+            Should -BeOfType Microsoft.Powershell.Commands.WebRequestSession
+        }
+    }
+}
 
 Describe "Invoke-Accelo" {
     BeforeEach{

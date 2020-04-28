@@ -1,9 +1,36 @@
+$authuriTemplate = "https://<deployment>.api.accelo.com/oauth2/v0/<endpoint>"
+$apiuriTemplate = "https://<deployment>.api.accelo.com/api/v0/<endpoint>"
+
+function Get-AcceloUri {
+    [CmdletBinding()]
+    param (
+        [string]$template,
+        [string]$deployment,
+        [string]$endpoint = ""
+    )
+    
+    begin {
+        
+    }
+    
+    process {
+        $uri = $template -replace "<deployment>",$deployment `
+        -replace "<endpoint>",$endpoint
+        $uri
+    }
+    
+    end {
+        
+    }
+}
 
 function Invoke-Accelo{
     [Cmdletbinding(DefaultParameterSetName="InvokeUriString")]
     param (
         [Parameter(Mandatory=$true,ParameterSetName="InvokeUriString")]
         [string]$uri,
+
+        [string]$SessionVariable,
 
         [string]$method = "GET",
 
@@ -32,6 +59,7 @@ function Invoke-Accelo{
             method = $method
             headers = $headers
             uri = $newuri.Uri.OriginalString
+            SessionVariable = $SessionVariable
         }
         if ($body) {
             $invokeSplat.add('body', $body)
@@ -80,6 +108,41 @@ function Get-AcceloToken {
     $invocation = Invoke-Accelo -Method POST -uri $uri -body $tokenreq_body -Headers $headers
     $token = $invocation.access_token
     $token
+}
+
+function Connect-Accelo {
+    [CmdletBinding()]
+    param (
+        [string]$deployment,
+        [string]$scope,
+        [PSCredential]$credential
+    )
+    
+    begin {
+        $authEndpoint = "/token"
+        $authuri = Get-AcceloUri -template $authuriTemplate `
+        -deployment -$deployment `
+        -endpoint $authEndpoint
+
+        $apiEndpoint = "/tokeninfo"
+        $apiuri = Get-AcceloUri -template $apiuriTemplate `
+        -deployment -$deployment `
+        -endpoint $apiEndpoint
+    }
+    
+    process {
+        $token = Get-AcceloToken -uri $authuri -credential $credential -scope $scope
+        $headers = @{
+            "Authorization" = "Bearer $token"
+        }
+
+        $response = Invoke-Accelo -uri $apiuri -headers $headers -SessionVariable "global:AcceloSession"
+        $response
+    }
+    
+    end {
+        
+    }
 }
 
 function Get-AcceloCompanies {
@@ -278,4 +341,4 @@ function Get-AcceloAffiliations {
     }
 }
 
-Export-ModuleMember -Function Invoke-Accelo,*-AcceloToken,*-AcceloRequest*,*-AcceloCompan*,*-AcceloAffiliation*
+Export-ModuleMember -Function Get-AcceloUri,Connect-Accelo,Invoke-Accelo,*-AcceloToken,*-AcceloRequest*,*-AcceloCompan*,*-AcceloAffiliation*
