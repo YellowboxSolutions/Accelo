@@ -10,15 +10,23 @@ $testcred = New-Object -TypeName System.Management.Automation.PSCredential -Argu
 $testuri = "https://example.com/sdf"
 $testtoken = "testtokencontent"
 $testscope = "read(all)"
-$testdeployment = "test1"
 $testendpoint = "testend1"
-$testUriTemplate = "https://<deployment>.example.com/<endpoint>"
+$testBaseUri = "https://test1.api.accelo.com/api/v0"
+$testAuthUri = "https://test1.api.accelo.com/oauth/v0"
 
 Describe "Get-AcceloUri" {
     Context "Get API URI" {
         It "It returns valid api uri" {
-            $uri = Get-AcceloUri -template $testUriTemplate -deployment $testdeployment -endpoint $testendpoint
-            $uri | Should -BeLike "*$testdeployment.*$testendpoint"
+            $uri = Get-AcceloUri -baseUri $testBaseUri -endpoint "testendpoint"
+            $uri | Should -BeOfType System.UriBuilder
+            
+            $uri.Host | Should -Be "test1.api.accelo.com"
+            $uri.Path | Should -Be "/api/v0/testendpoint"
+        }
+
+        It "Strips trailing slash in baseuri" {
+            $uri = Get-AcceloUri -baseUri "$testBaseUri/" -endpoint "testendpoint"
+            $uri.Path | Should -Be "/api/v0/testendpoint"
         }
     }
 }
@@ -44,10 +52,21 @@ Describe "Connect-Accelo" {
             }
             $request
         }
-        $response = Connect-Accelo -deployment $testdeployment -scope $testscope -credential $testcred
+
+        $connectSplat = @{
+            authUri = $testAuthUri
+            baseUri = $testBaseUri
+            scope = $testscope
+            credential = $testcred
+        }
+
+        $response = Connect-Accelo @connectSplat
         $response
     }
     Context "Connect with Username and Password" {
+        It "Hits the correct endpoint" {
+            $($response.uri) | Should -be "$testBaseUri/tokeninfo"
+        }
         It "Returns expected content from body" {
             $($response.headers.authorization) |
             Should -belike "Bearer *"
@@ -55,12 +74,13 @@ Describe "Connect-Accelo" {
         It "Sets a global session var global:AcceloSession" {
             $global:AcceloSession|
             Should -BeOfType Microsoft.Powershell.Commands.WebRequestSession
+
         }
     }
 }
 
 Describe "Invoke-Accelo" {
-    BeforeEach{
+    BeforeAll{
         Mock Invoke-WebRequest -modulename Accelo -Verifiable{
             $content = @{
                 method = [string]$method
@@ -96,6 +116,12 @@ Describe "Invoke-Accelo" {
         $queries = @{
             testq1 = "testval1"
             testq2 = "testval2"
+        }
+
+        It "Queries the correct endpoint" {
+            $uri = Invoke-Accelo -uri "$testuri/anything" |
+            Select-Object -ExpandProperty uri
+            $uri | Should -be "$testuri/anything"
         }
 
         It "Uri contains query string <query> sent as parameters" {

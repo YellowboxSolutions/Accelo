@@ -1,11 +1,9 @@
-$authuriTemplate = "https://<deployment>.api.accelo.com/oauth2/v0/<endpoint>"
-$apiuriTemplate = "https://<deployment>.api.accelo.com/api/v0/<endpoint>"
 
 function Get-AcceloUri {
     [CmdletBinding()]
     param (
-        [string]$template,
-        [string]$deployment,
+        [Parameter(Mandatory)]
+        [string]$baseUri,
         [string]$endpoint = ""
     )
     
@@ -14,9 +12,11 @@ function Get-AcceloUri {
     }
     
     process {
-        $uri = $template -replace "<deployment>",$deployment `
-        -replace "<endpoint>",$endpoint
-        $uri
+
+        $uriObject = [System.UriBuilder]$baseUri
+        $uriObject.path = $($uriObject.path).trimEnd("/")
+        $uriObject.path = "$($uriObject.path)/$endpoint"
+        $uriObject
     }
     
     end {
@@ -27,8 +27,8 @@ function Get-AcceloUri {
 function Invoke-Accelo{
     [Cmdletbinding(DefaultParameterSetName="InvokeUriString")]
     param (
-        [Parameter(Mandatory=$true,ParameterSetName="InvokeUriString")]
-        [string]$uri,
+        [Parameter(Mandatory,ParameterSetName="InvokeUriString")]
+        [System.UriBuilder]$uri,
 
         [string]$SessionVariable,
 
@@ -52,23 +52,17 @@ function Invoke-Accelo{
                 $queryCollection.add($key, $query.$key)
             }
         }
-        $newuri = [System.UriBuilder]$uri
-        $newuri.Query = $queryCollection.ToString()
+        $uri.Query = $queryCollection.ToString()
 
         $invokeSplat = @{
             method = $method
             headers = $headers
-            uri = $newuri.Uri.OriginalString
+            uri = $uri.Uri.OriginalString
             SessionVariable = $SessionVariable
         }
         if ($body) {
             $invokeSplat.add('body', $body)
         }
-        write-verbose "Invocation: uri($uri)"
-        write-verbose "Invocation: method($method)"
-        write-verbose "Invocation: query($($query|convertto-json))"
-        write-verbose "Invocation: headers($($headers|convertto-json))"
-        write-verbose "Invocation: body($($body|convertto-json))"
         try{
             $invocation = Invoke-WebRequest @invokeSplat
         } catch {
@@ -87,9 +81,9 @@ function Invoke-Accelo{
 
 function Get-AcceloToken {
     param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [string]$uri,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [PSCredential]$credential,
         [string]$scope = "read(all)"
     )
@@ -113,20 +107,21 @@ function Get-AcceloToken {
 function Connect-Accelo {
     [CmdletBinding()]
     param (
-        [string]$deployment,
+        [Parameter(Mandatory)]
+        [string]$authUri,
+        [Parameter(Mandatory)]
+        [string]$baseUri,
         [string]$scope,
         [PSCredential]$credential
     )
     
     begin {
-        $authEndpoint = "/token"
-        $authuri = Get-AcceloUri -template $authuriTemplate `
-        -deployment -$deployment `
+        $authEndpoint = "token"
+        $authuri = Get-AcceloUri -baseUri $authUri `
         -endpoint $authEndpoint
 
-        $apiEndpoint = "/tokeninfo"
-        $apiuri = Get-AcceloUri -template $apiuriTemplate `
-        -deployment -$deployment `
+        $apiEndpoint = "tokeninfo"
+        $apiuri = Get-AcceloUri -baseUri $baseUri `
         -endpoint $apiEndpoint
     }
     
@@ -148,13 +143,13 @@ function Connect-Accelo {
 function Get-AcceloCompanies {
     [Cmdletbinding(DefaultParameterSetName="GetCompanies")]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [string]$uri,
-        [Parameter(Mandatory=$true,ParameterSetName="GetCompanies")]
-        [Parameter(Mandatory=$true,ParameterSetName="GetCompanyById")]
+        [Parameter(Mandatory,ParameterSetName="GetCompanies")]
+        [Parameter(Mandatory,ParameterSetName="GetCompanyById")]
         [string]$token,
 
-        [Parameter(Mandatory=$true,ParameterSetName="GetCompanyById")]
+        [Parameter(Mandatory,ParameterSetName="GetCompanyById")]
         [string]$companyId,
 
         [Parameter()]
@@ -195,14 +190,14 @@ function Get-AcceloCompanies {
 function Get-AcceloRequests {
     [CmdletBinding(DefaultParameterSetName="GetRequests")]
     param (
-        [Parameter(mandatory=$true)]
+        [Parameter(Mandatory)]
         [string]$uri,
 
-        [Parameter(Mandatory=$true, ParameterSetName="GetRequests")]
-        [Parameter(Mandatory=$true, ParameterSetName="GetRequestById")]
+        [Parameter(Mandatory, ParameterSetName="GetRequests")]
+        [Parameter(Mandatory, ParameterSetName="GetRequestById")]
         [string]$token,
 
-        [Parameter(Mandatory=$true, ParameterSetName="GetRequestById")]
+        [Parameter(Mandatory, ParameterSetName="GetRequestById")]
         [string]$id,
 
         [Parameter()]
@@ -248,22 +243,22 @@ function Get-AcceloRequests {
 function Add-AcceloRequest {
     [CmdletBinding(DefaultParameterSetName="AddRequest")]
     param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [string]$uri,
 
-        [Parameter(Mandatory=$true, ParameterSetName="AddRequest")]
+        [Parameter(Mandatory, ParameterSetName="AddRequest")]
         [string]$token,
 
-        [Parameter(Mandatory=$true, ParameterSetName="AddRequest")]
+        [Parameter(Mandatory, ParameterSetName="AddRequest")]
         [string]$typeId,
 
-        [Parameter(Mandatory=$true, ParameterSetName="AddRequest")]
+        [Parameter(Mandatory, ParameterSetName="AddRequest")]
         [string]$title,
 
-        [Parameter(Mandatory=$true, ParameterSetName="AddRequest")]
+        [Parameter(Mandatory, ParameterSetName="AddRequest")]
         [string]$affiliationId,
 
-        [Parameter(Mandatory=$true, ParameterSetName="AddRequest")]
+        [Parameter(Mandatory, ParameterSetName="AddRequest")]
         [string]$body
 
     )
@@ -296,14 +291,14 @@ function Add-AcceloRequest {
 function Get-AcceloAffiliations {
     [Cmdletbinding(DefaultParameterSetName="GetAffiliations")]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [string]$uri,
 
-        [Parameter(Mandatory=$true,ParameterSetName="GetAffiliations")]
-        [Parameter(Mandatory=$true,ParameterSetName="GetAffiliationsById")]
+        [Parameter(Mandatory,ParameterSetName="GetAffiliations")]
+        [Parameter(Mandatory,ParameterSetName="GetAffiliationsById")]
         [string]$token,
 
-        [Parameter(Mandatory=$true,ParameterSetName="GetAffiliationsById")]
+        [Parameter(Mandatory,ParameterSetName="GetAffiliationsById")]
         [string]$affiliationId,
 
         [Parameter()]
