@@ -1,22 +1,42 @@
+$AcceloSession = [ordered]@{
+    User            = $null
+    Secret          = $null
+    BaseUri         = $null
+    AccessToken     = $null
+    RefreshToken    = $null
+    ConnectTime             = $null
+    ElapsedTime             = $null
+}
+New-Variable -Name AcceloSession -Value $AcceloSession -Scope Script -Force
 
 function Get-AcceloUri {
     [CmdletBinding()]
     param (
+        # Uri
         [Parameter(Mandatory)]
-        [string]$baseUri,
-        [string]$endpoint = ""
+        [Uri]
+        $uri,
+        [string]$path,
+        
+        [hashtable]$query
     )
     
     begin {
-        
     }
     
     process {
-
-        $uriObject = [System.UriBuilder]$baseUri
-        $uriObject.path = $($uriObject.path).trimEnd("/")
-        $uriObject.path = "$($uriObject.path)/$endpoint"
-        $uriObject
+        $UriBuilder = [UriBuilder]$uri
+        Add-Type -AssemblyName System.Web
+        $queryCollection = [System.Web.HttpUtility]::ParseQueryString([string]::Empty)
+        
+        foreach ($key in $query.Keys) {
+            if ($query.$key) {
+                $queryCollection.add($key, $query.$key)
+            }
+        }
+        $UriBuilder.Query = $queryCollection.ToString()
+        $UriBuilder.Path = $path
+        $UriBuilder.Uri
     }
     
     end {
@@ -27,39 +47,36 @@ function Get-AcceloUri {
 function Invoke-Accelo{
     [Cmdletbinding(DefaultParameterSetName="InvokeUriString")]
     param (
-        [Parameter(Mandatory,ParameterSetName="InvokeUriString")]
-        [System.UriBuilder]$uri,
-
-        [string]$SessionVariable,
+        [Parameter(Mandatory)]
+        [Uri]$uri,
 
         [string]$method = "GET",
 
-        [hashtable]$query,
-
         [hashtable]$headers,
+
+        [hashtable]$query,
         
         [hashtable]$body
     )
 
     Begin {
+
     }
 
     Process {
-        Add-Type -AssemblyName System.Web
-        $queryCollection = [System.Web.HttpUtility]::ParseQueryString([string]::Empty)
-        foreach ($key in $query.Keys) {
-            if ($query.$key) {
-                $queryCollection.add($key, $query.$key)
-            }
-        }
-        $uri.Query = $queryCollection.ToString()
-
         $invokeSplat = @{
             method = $method
-            headers = $headers
-            uri = $uri.Uri.OriginalString
-            SessionVariable = $SessionVariable
+            uri = $uri
         }
+        
+        if (($headers) -and ($headers.ContainsKey('Authorization'))) {
+            $invokeSplat.add('headers', $headers)
+        } elseif ($AcceloSession.AccessToken) {
+            $invokeSplat.add('headers', @{Authorization = "Bearer $($AcceloSession.AccessToken)"})
+        } else {
+            write-error "No Auth info provided"
+        }
+        
         if ($body) {
             $invokeSplat.add('body', $body)
         }
@@ -69,7 +86,7 @@ function Invoke-Accelo{
             write-error "Accelo request broke: $_"
             return
         }
-
+        write-verbose $invocation
         $response = $invocation.Content|ConvertFrom-Json
         $response
     }
@@ -79,60 +96,49 @@ function Invoke-Accelo{
     }
 }
 
-function Get-AcceloToken {
-    param (
-        [Parameter(Mandatory)]
-        [string]$uri,
-        [Parameter(Mandatory)]
-        [PSCredential]$credential,
-        [string]$scope = "read(all)"
-    )
-
-    $tokenreq_body = @{
-        grant_type = "client_credentials"
-        scope = $scope
-    }
-
-    $authinfo = ("{0}:{1}" -f $($credential.username), $($credential.GetNetworkCredential().password))
-    $authinfo = [System.Text.Encoding]::UTF8.GetBytes($authinfo)
-    $authinfo = [System.Convert]::ToBase64String($authinfo)
-
-    $headers = @{ Authorization = "Basic $authinfo"}
-
-    $invocation = Invoke-Accelo -Method POST -uri $uri -body $tokenreq_body -Headers $headers
-    $token = $invocation.access_token
-    $token
-}
-
 function Connect-Accelo {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [string]$authUri,
+        [string]$User,
+
         [Parameter(Mandatory)]
-        [string]$baseUri,
-        [string]$scope,
-        [PSCredential]$credential
+        [SecureString]$Secret,
+
+        [Parameter(Mandatory)]
+        [string]$BaseUri,
+
+        [string]$Scope = "read(all)"
     )
     
     begin {
-        $authEndpoint = "token"
-        $authuri = Get-AcceloUri -baseUri $authUri `
-        -endpoint $authEndpoint
+        $AcceloSession.User = $User
+        $AcceloSession.Secret = $Secret
+        $AcceloSession.BaseUri = [Uri]$BaseUri.TrimEnd()
+        $AcceloSession.ConnectTime = [System.DateTime]::Now
+        $AcceloSession.ElapsedTime = [System.Diagnostics.Stopwatch]::StartNew()
 
-        $apiEndpoint = "tokeninfo"
-        $apiuri = Get-AcceloUri -baseUri $baseUri `
-        -endpoint $apiEndpoint
+        $OAuthUri = Get-AcceloUri -uri $AcceloSession.Baseuri -path "/oauth2/v0/token"
+
+        $body = @{
+            grant_type = "client_credentials"
+            scope = $scope
+        }
+
+        $credential = New-Object System.Management.Automation.PSCredential -ArgumentList $AcceloSession.User,$AcceloSession.Secret
+
+        $authinfo = ("{0}:{1}" -f $($Credential.UserName), $($Credential.GetNetworkCredential().password))
+        $authinfo = [System.Text.Encoding]::UTF8.GetBytes($authinfo)
+        $authinfo = [System.Convert]::ToBase64String($authinfo)
+
+        $headers = @{ Authorization = "Basic $authinfo"}
     }
     
     process {
-        $token = Get-AcceloToken -uri $authuri -credential $credential -scope $scope
-        $headers = @{
-            "Authorization" = "Bearer $token"
-        }
-
-        $response = Invoke-Accelo -uri $apiuri -headers $headers -SessionVariable "global:AcceloSession"
-        $response
+        $invocation = Invoke-Accelo -Method POST -uri $OAuthUri -body $body -Headers $headers
+        $AcceloSession.AccessToken = $invocation.access_token
+        $AcceloSession.RefreshToken = $invocation.refresh_token
+        $AcceloSession
     }
     
     end {
@@ -140,17 +146,17 @@ function Connect-Accelo {
     }
 }
 
-function Get-AcceloCompanies {
-    [Cmdletbinding(DefaultParameterSetName="GetCompanies")]
-    param(
-        [Parameter(Mandatory)]
-        [string]$uri,
-        [Parameter(Mandatory,ParameterSetName="GetCompanies")]
-        [Parameter(Mandatory,ParameterSetName="GetCompanyById")]
-        [string]$token,
+function Get-AcceloSession {
+    $AcceloSession | ConvertTo-Json | ConvertFrom-Json
+}
 
+function Get-AcceloCompany {
+    [Cmdletbinding(DefaultParameterSetName="GetCompany")]
+    param(
+        # Company Id
         [Parameter(Mandatory,ParameterSetName="GetCompanyById")]
-        [string]$companyId,
+        [string]
+        $Id,
 
         [Parameter()]
         [string]$filters,
@@ -160,42 +166,33 @@ function Get-AcceloCompanies {
     )
 
     Begin {
-        $uriObject = [System.Uribuilder]$uri
+        $uriObject = [System.Uribuilder]$AcceloSession.BaseUri
         switch ($PSCmdlet.parametersetname) {
-            'GetCompanies' { 
-                $uriObject.path = "$($uriObject.path)/companies"
+            'GetCompany' { 
+                $uriObject.path = "$($uriObject.path)api/v0/companies"
             }
 
             'GetCompanyById' {
-                $uriObject.path = "$($uriObject.path)/companies/$companyId"
+                $uriObject.path = "$($uriObject.path)api/v0/companies/$Id"
             }
 
             Default {
                 throw "Something went wrong with the ParameterSetName."
             }
         }
-        $headers = @{
-            "Authorization" = "Bearer $token"
-        }
         $query = @{"_filters" = $filters; "_fields" = $fields}
     }
 
 
     Process {
-        $companies = (Invoke-Accelo -uri $uriObject -headers $headers -query $query).response
-        $companies
+        $company = (Invoke-Accelo -uri $uriObject.uri -headers $headers -query $query).response
+        $company
     }
 }
 
 function Get-AcceloRequests {
     [CmdletBinding(DefaultParameterSetName="GetRequests")]
     param (
-        [Parameter(Mandatory)]
-        [string]$uri,
-
-        [Parameter(Mandatory, ParameterSetName="GetRequests")]
-        [Parameter(Mandatory, ParameterSetName="GetRequestById")]
-        [string]$token,
 
         [Parameter(Mandatory, ParameterSetName="GetRequestById")]
         [string]$id,
@@ -336,4 +333,4 @@ function Get-AcceloAffiliations {
     }
 }
 
-Export-ModuleMember -Function Get-AcceloUri,Connect-Accelo,Invoke-Accelo,*-AcceloToken,*-AcceloRequest*,*-AcceloCompan*,*-AcceloAffiliation*
+Export-ModuleMember -Function Get-AcceloUri,Connect-Accelo,Invoke-Accelo,*-AcceloToken,*-AcceloRequest*,*-AcceloCompan*,*-AcceloAffiliation*,Get-AcceloSession
