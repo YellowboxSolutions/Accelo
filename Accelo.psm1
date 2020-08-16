@@ -166,6 +166,9 @@ function Get-AcceloCompany {
         $Id,
 
         [Parameter()]
+        [int]$limit,
+
+        [Parameter()]
         [string]$filters,
 
         [Parameter()]
@@ -189,7 +192,7 @@ function Get-AcceloCompany {
         }
         $query = @{"_filters" = $filters; "_fields" = $fields}
         
-        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath
+        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
 
     }
 
@@ -301,6 +304,9 @@ function Get-AcceloAffiliation {
 
         [Parameter(Mandatory,ParameterSetName="GetAffiliationById")]
         [string]$Id,
+        
+        [Parameter()]
+        [int]$limit,
 
         [Parameter()]
         [string]$filters,
@@ -324,7 +330,7 @@ function Get-AcceloAffiliation {
                 throw "Something went wrong with the ParameterSetName."
             }
         }
-        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath
+        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
     }
 
 
