@@ -14,11 +14,11 @@ function Get-AcceloUri {
     param (
         # Uri
         [Parameter(Mandatory)]
-        [Uri]
-        $uri,
+        [Uri]$uri,
         [string]$path,
-        
-        [hashtable]$query
+        [int]$limit,
+        [string]$filters,
+        [string]$fields
     )
     
     begin {
@@ -26,16 +26,25 @@ function Get-AcceloUri {
     
     process {
         $UriBuilder = [UriBuilder]$uri
-        Add-Type -AssemblyName System.Web
-        $queryCollection = [System.Web.HttpUtility]::ParseQueryString([string]::Empty)
-        
-        foreach ($key in $query.Keys) {
-            if ($query.$key) {
-                $queryCollection.add($key, $query.$key)
+
+        if (($filters) -or ($fields) -or ($limit)) {
+            $queryCollection = [System.Web.HttpUtility]::ParseQueryString([string]::Empty)
+            if ($limit) {
+                $queryCollection.add("_limit", $limit)
             }
+            if ($filters) {
+                $queryCollection.add("_filters", $filters)
+            }
+            if ($fields) {
+                $queryCollection.add("_fields", $fields)
+            }
+            $UriBuilder.Query = $queryCollection.ToString()
+
         }
-        $UriBuilder.Query = $queryCollection.ToString()
-        $UriBuilder.Path = $path
+
+        if ($path) {
+            $UriBuilder.Path = $path
+        }
         $UriBuilder.Uri
     }
     
@@ -54,8 +63,6 @@ function Invoke-Accelo{
 
         [hashtable]$headers,
 
-        [hashtable]$query,
-        
         [hashtable]$body
     )
 
@@ -166,14 +173,14 @@ function Get-AcceloCompany {
     )
 
     Begin {
-        $uriObject = [System.Uribuilder]$AcceloSession.BaseUri
+        $UriPath = $null
         switch ($PSCmdlet.parametersetname) {
             'GetCompany' { 
-                $uriObject.path = "$($uriObject.path)api/v0/companies"
+                $UriPath = "api/v0/companies"
             }
 
             'GetCompanyById' {
-                $uriObject.path = "$($uriObject.path)api/v0/companies/$Id"
+                $UriPath =  "api/v0/companies/$Id"
             }
 
             Default {
@@ -181,21 +188,27 @@ function Get-AcceloCompany {
             }
         }
         $query = @{"_filters" = $filters; "_fields" = $fields}
+        
+        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath
+
     }
 
 
     Process {
-        $company = (Invoke-Accelo -uri $uriObject.uri -headers $headers -query $query).response
+        $company = (Invoke-Accelo -uri $uri).response
         $company
     }
 }
 
-function Get-AcceloRequests {
-    [CmdletBinding(DefaultParameterSetName="GetRequests")]
+function Get-AcceloRequest {
+    [CmdletBinding(DefaultParameterSetName="GetRequest")]
     param (
 
         [Parameter(Mandatory, ParameterSetName="GetRequestById")]
         [string]$id,
+
+        [Parameter()]
+        [int]$limit,
 
         [Parameter()]
         [string]$filters,
@@ -205,30 +218,27 @@ function Get-AcceloRequests {
     )
     
     begin {
-        $uriObject = [System.Uribuilder]$uri
+        $UriPath = $null
         switch ($PSCmdlet.parametersetname) {
-            'GetRequests' { 
-                $uriObject.path = "$($uriObject.path)/requests"
+            'GetRequest' { 
+                $UriPath = "$($uriObject.path)/api/v0/requests"
             }
 
             'GetRequestById' {
-                $uriObject.path = "$($uriObject.path)/requests/$id"
+                $UriPath = "$($uriObject.path)/api/v0/requests/$id"
             }
 
             Default {
                 throw "Something went wrong with the ParameterSetName."
             }
         }
-        $headers = @{
-            "Authorization" = "Bearer $token"
-        }
-        $query = @{"_filters" = $filters; "_fields" = $fields}
+        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
         
     }
     
     process {
         
-        $requests = (Invoke-Accelo -uri $uriObject -headers $headers -query $query).response
+        $requests = (Invoke-Accelo -uri $Uri).response
         $requests
     }
     
@@ -285,18 +295,12 @@ function Add-AcceloRequest {
     }
 }
 
-function Get-AcceloAffiliations {
-    [Cmdletbinding(DefaultParameterSetName="GetAffiliations")]
+function Get-AcceloAffiliation {
+    [Cmdletbinding(DefaultParameterSetName="GetAffiliation")]
     param(
-        [Parameter(Mandatory)]
-        [string]$uri,
 
-        [Parameter(Mandatory,ParameterSetName="GetAffiliations")]
-        [Parameter(Mandatory,ParameterSetName="GetAffiliationsById")]
-        [string]$token,
-
-        [Parameter(Mandatory,ParameterSetName="GetAffiliationsById")]
-        [string]$affiliationId,
+        [Parameter(Mandatory,ParameterSetName="GetAffiliationById")]
+        [string]$Id,
 
         [Parameter()]
         [string]$filters,
@@ -306,29 +310,26 @@ function Get-AcceloAffiliations {
     )
 
     Begin {
-        $uriObject = [System.Uribuilder]$uri
+        $UriPath = $null
         switch ($PSCmdlet.ParameterSetName) {
-            'GetAffiliations' { 
-                $uriObject.path = "$($uriObject.path)/affiliations"
+            'GetAffiliation' { 
+                $UriPath = "/api/v0/affiliations"
             }
 
-            'GetAffiliationsById' {
-                $uriObject.path = "$($uriObject.path)/affiliations/$affiliationId"
+            'GetAffiliationById' {
+                $UriPath = "/api/v0/affiliations/$Id"
             }
 
             Default {
                 throw "Something went wrong with the ParameterSetName."
             }
         }
-        $query = @{"_filters" = $filters; "_fields" = $fields}
-        $headers = @{
-            "Authorization" = "Bearer $token"
-        }
+        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath
     }
 
 
     Process {
-        $affiliations = (Invoke-Accelo -uri $uriObject -headers $headers -query $query).response
+        $affiliations = (Invoke-Accelo -uri $Uri).response
         $affiliations
     }
 }
