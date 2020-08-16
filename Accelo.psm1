@@ -158,24 +158,29 @@ function Get-AcceloSession {
 }
 
 function Get-AcceloCompany {
-    [Cmdletbinding(DefaultParameterSetName="GetCompany")]
+    [Cmdletbinding(DefaultParametersetName="GetCompany")]
     param(
         # Company Id
-        [Parameter(Mandatory,ParameterSetName="GetCompanyById")]
+        [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetCompanyById")]
         [string]
         $Id,
 
-        [Parameter()]
+        [Parameter(ParametersetName="GetCompany")]
         [int]$limit,
 
-        [Parameter()]
+        [Parameter(ParametersetName="GetCompany")]
         [string]$filters,
 
-        [Parameter()]
+        [Parameter(ParametersetName="GetCompany")]
         [string]$fields
     )
 
     Begin {
+
+    }
+
+
+    Process {
         $UriPath = $null
         switch ($PSCmdlet.parametersetname) {
             'GetCompany' { 
@@ -193,11 +198,6 @@ function Get-AcceloCompany {
         $query = @{"_filters" = $filters; "_fields" = $fields}
         
         $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
-
-    }
-
-
-    Process {
         $company = (Invoke-Accelo -uri $uri).response
         $company
     }
@@ -207,7 +207,7 @@ function Get-AcceloRequest {
     [CmdletBinding(DefaultParameterSetName="GetRequest")]
     param (
 
-        [Parameter(Mandatory, ParameterSetName="GetRequestById")]
+        [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetRequestById")]
         [string]$id,
 
         [Parameter()]
@@ -221,6 +221,10 @@ function Get-AcceloRequest {
     )
     
     begin {
+        
+    }
+    
+    process {
         $UriPath = $null
         switch ($PSCmdlet.parametersetname) {
             'GetRequest' { 
@@ -237,10 +241,6 @@ function Get-AcceloRequest {
         }
         $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
         
-    }
-    
-    process {
-        
         $requests = (Invoke-Accelo -uri $Uri).response
         $requests
     }
@@ -253,12 +253,6 @@ function Get-AcceloRequest {
 function Add-AcceloRequest {
     [CmdletBinding(DefaultParameterSetName="AddRequest")]
     param (
-        [Parameter(Mandatory)]
-        [string]$uri,
-
-        [Parameter(Mandatory, ParameterSetName="AddRequest")]
-        [string]$token,
-
         [Parameter(Mandatory, ParameterSetName="AddRequest")]
         [string]$typeId,
 
@@ -302,7 +296,7 @@ function Get-AcceloAffiliation {
     [Cmdletbinding(DefaultParameterSetName="GetAffiliation")]
     param(
 
-        [Parameter(Mandatory,ParameterSetName="GetAffiliationById")]
+        [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetAffiliationById")]
         [string]$Id,
         
         [Parameter()]
@@ -316,6 +310,10 @@ function Get-AcceloAffiliation {
     )
 
     Begin {
+    }
+
+
+    Process {
         $UriPath = $null
         switch ($PSCmdlet.ParameterSetName) {
             'GetAffiliation' { 
@@ -331,13 +329,43 @@ function Get-AcceloAffiliation {
             }
         }
         $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
-    }
-
-
-    Process {
         $affiliations = (Invoke-Accelo -uri $Uri).response
         $affiliations
     }
 }
 
+function Get-AcceloRequestType {
+    [Cmdletbinding(DefaultParameterSetName="GetRequestType")]
+    param(
+        
+        [Parameter()]
+        [int]$limit,
+
+        [Parameter()]
+        [string]$filters,
+
+        [Parameter()]
+        [string]$fields
+    )
+
+    Begin {
+    }
+
+
+    Process {
+        $UriPath = $null
+        switch ($PSCmdlet.ParameterSetName) {
+            'GetRequestType' { 
+                $UriPath = "/api/v0/requests/types"
+            }
+
+            Default {
+                throw "Something went wrong with the ParameterSetName."
+            }
+        }
+        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
+        $RequestTypes = (Invoke-Accelo -uri $Uri).response.request_types
+        $RequestTypes
+    }
+}
 Export-ModuleMember -Function Get-AcceloUri,Connect-Accelo,Invoke-Accelo,*-AcceloToken,*-AcceloRequest*,*-AcceloCompan*,*-AcceloAffiliation*,Get-AcceloSession
