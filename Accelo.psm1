@@ -159,7 +159,7 @@ function Get-AcceloSession {
 
 function Get-AcceloCompany {
     [Cmdletbinding(DefaultParametersetName="GetCompany")]
-    param(
+    param (
         # Company Id
         [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetCompanyById")]
         [string]
@@ -208,7 +208,7 @@ function Get-AcceloRequest {
     param (
 
         [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetRequestById")]
-        [string]$id,
+        [string]$Id,
 
         [Parameter()]
         [int]$limit,
@@ -232,7 +232,7 @@ function Get-AcceloRequest {
             }
 
             'GetRequestById' {
-                $UriPath = "$($uriObject.path)/api/v0/requests/$id"
+                $UriPath = "$($uriObject.path)/api/v0/requests/$Id"
             }
 
             Default {
@@ -294,7 +294,7 @@ function Add-AcceloRequest {
 
 function Get-AcceloAffiliation {
     [Cmdletbinding(DefaultParameterSetName="GetAffiliation")]
-    param(
+    param (
 
         [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetAffiliationById")]
         [string]$Id,
@@ -336,7 +336,7 @@ function Get-AcceloAffiliation {
 
 function Get-AcceloRequestType {
     [Cmdletbinding(DefaultParameterSetName="GetRequestType")]
-    param(
+    param (
         
         [Parameter()]
         [int]$limit,
