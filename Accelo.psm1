@@ -228,11 +228,11 @@ function Get-AcceloRequest {
         $UriPath = $null
         switch ($PSCmdlet.parametersetname) {
             'GetRequest' { 
-                $UriPath = "$($uriObject.path)/api/v0/requests"
+                $UriPath = "api/v0/requests"
             }
 
             'GetRequestById' {
-                $UriPath = "$($uriObject.path)/api/v0/requests/$Id"
+                $UriPath = "/api/v0/requests/$Id"
             }
 
             Default {
@@ -268,11 +268,8 @@ function Add-AcceloRequest {
     )
     
     begin {
-        $uriObject = [System.Uribuilder]$uri
-        $uriObject.path = "$($uriObject.path)/requests"
-        $headers = @{
-            "Authorization" = "Bearer $token"
-        }
+        $UriPath = "/api/v0/requests"
+        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
     }
     
     process {
@@ -283,7 +280,7 @@ function Add-AcceloRequest {
             affiliation_id = $affiliationId
         }
 
-        $request = (Invoke-Accelo -headers $headers -method "POST" -uri $uriObject -body $acceloRequest).response
+        $request = (Invoke-Accelo -uri $Uri -method "POST" -body $acceloRequest).response
         $request
     }
     
