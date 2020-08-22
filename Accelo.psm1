@@ -161,10 +161,9 @@ function Get-AcceloCompany {
     [Cmdletbinding(DefaultParametersetName="GetCompany")]
     param(
         # Company Id
-        [Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName,ParameterSetName="GetCompanyById")]
-        [Alias('company')]
+        [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetCompanyById")]
         [string]
-        $CompanyId,
+        $Id,
 
         [Parameter(ParametersetName="GetCompany")]
         [int]$limit,
@@ -189,7 +188,7 @@ function Get-AcceloCompany {
             }
 
             'GetCompanyById' {
-                $UriPath =  "api/v0/companies/$CompanyId"
+                $UriPath =  "api/v0/companies/$Id"
             }
 
             Default {
@@ -208,8 +207,8 @@ function Get-AcceloRequest {
     [CmdletBinding(DefaultParameterSetName="GetRequest")]
     param (
 
-        [Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName,ParameterSetName="GetRequestById")]
-        [string]$RequestId,
+        [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetRequestById")]
+        [string]$id,
 
         [Parameter()]
         [int]$limit,
@@ -233,7 +232,7 @@ function Get-AcceloRequest {
             }
 
             'GetRequestById' {
-                $UriPath = "$($uriObject.path)/api/v0/requests/$RequestId"
+                $UriPath = "$($uriObject.path)/api/v0/requests/$id"
             }
 
             Default {
@@ -297,8 +296,8 @@ function Get-AcceloAffiliation {
     [Cmdletbinding(DefaultParameterSetName="GetAffiliation")]
     param(
 
-        [Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName,ParameterSetName="GetAffiliationById")]
-        [string]$AffiliationId,
+        [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetAffiliationById")]
+        [string]$Id,
         
         [Parameter()]
         [int]$limit,
@@ -322,7 +321,7 @@ function Get-AcceloAffiliation {
             }
 
             'GetAffiliationById' {
-                $UriPath = "/api/v0/affiliations/$AffiliationId"
+                $UriPath = "/api/v0/affiliations/$Id"
             }
 
             Default {
