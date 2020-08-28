@@ -61,6 +61,8 @@ function Invoke-Accelo{
 
         [string]$method = "GET",
 
+        [string]$ContentType,
+
         [hashtable]$headers,
 
         [hashtable]$body
@@ -74,6 +76,15 @@ function Invoke-Accelo{
         $invokeSplat = @{
             method = $method
             uri = $uri
+        }
+        if ($ContentType) {
+            $invokeSplat.add('ContentType', $ContentType)
+            if (($body) -and ($ContentType -eq "application/x-www-form-urlencoded")) {
+                foreach ($key in $body) {
+                    $newbody = "$newbody$key = $($body[$key])`r`n"
+                }
+
+            }
         }
         
         if (($headers) -and ($headers.ContainsKey('Authorization'))) {
