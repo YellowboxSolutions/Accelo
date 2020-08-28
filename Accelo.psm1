@@ -301,6 +301,90 @@ function Add-AcceloRequest {
     }
 }
 
+function Update-AcceloRequest {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory,ValueFromPipeline)]
+        [string]$Id,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [string]$Title,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [string]$Body,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [string]$TypeId,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [string]$LeadId,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [string]$AffiliationId,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [string]$PriorityId,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [string]$Source,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [ValidateSet("pending","open","converted","closed")]
+        [string]$Standing,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [string]$ClaimerId,
+
+        [Parameter()]
+        [string]$filters,
+
+        [Parameter()]
+        [string]$fields
+    )
+    $UriPath = "api/v0/requests/$Id"
+    $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -fields $fields -filters $filters
+
+    $RequestSplat = @{}
+
+    if ($Title) { 
+        $RequestSplat.add("title", $Title)
+    }
+
+    if ($Body) { 
+        $RequestSplat.add("body", $Body)
+    }
+
+    if ($TypeId) { 
+        $RequestSplat.add("type_id", $TypeId)
+    }
+    
+    if ($LeadId) { 
+        $RequestSplat.add("lead_id", $LeadId)
+    }
+    
+    if ($AffiliationId) { 
+        $RequestSplat.add("affiliation_id", $AffiliationId)
+    }
+    
+    if ($PriorityId) { 
+        $RequestSplat.add("priority_id", $PriorityId)
+    }
+    
+    if ($Source) { 
+        $RequestSplat.add("source", $Source)
+    }
+    
+    if ($Standing) { 
+        $RequestSplat.add("standing", $Standing)
+    }
+    
+    if ($ClaimerId) { 
+        $RequestSplat.add("claimer_id", $ClaimerId)
+    }
+    $response = (Invoke-Accelo -uri $Uri -method "PUT" -contenttype "application/x-www-form-urlencoded" -body $RequestSplat).response
+    $response
+}
+
 function Get-AcceloAffiliation {
     [Cmdletbinding(DefaultParameterSetName="GetAffiliation")]
     param (
