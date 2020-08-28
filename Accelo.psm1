@@ -104,7 +104,8 @@ function Invoke-Accelo{
             write-error "Accelo request broke: $_"
             return
         }
-        write-verbose $invocation
+        write-verbose "Request: $($invokeSplat|convertto-json)"
+        write-verbose "Response: $invocation"
         $response = $invocation.Content|ConvertFrom-Json
         $response
     }
