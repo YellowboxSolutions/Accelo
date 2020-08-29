@@ -150,20 +150,6 @@ Describe "Connect-Accelo" {
     }
 }
 
-
-Describe "Get-AcceloToken" {
-    Context "Get Token" {
-        Mock -ModuleName Accelo -ParameterFilter {$method -eq "POST"} Invoke-Accelo {
-            return @{access_token = "$($headers.Authorization)"}
-        }
-        $token = Get-AcceloToken -uri $testuri -credential $testcred -scope "TestScope2"
-
-        It "Returns a token built from authinfo header" {
-            $token | Should -BeLike "Basic *"
-        }
-    }
-}
-
 Describe "Get-AcceloCompanies" {
     Context "Get unfiltered list of companies" {
         It "Returns list of companies." {
