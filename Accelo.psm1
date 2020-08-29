@@ -243,7 +243,7 @@ function Get-AcceloRequest {
         [Parameter(ParameterSetName="GetRequest")]
         [string]$filters,
 
-        [Parameter(ParameterSetName="GetRequest")]
+        [Parameter()]
         [string]$fields,
 
         [Parameter(ParameterSetName="GetRequest")]
