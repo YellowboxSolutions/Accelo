@@ -18,7 +18,8 @@ function Get-AcceloUri {
         [string]$path,
         [int]$limit,
         [string]$filters,
-        [string]$fields
+        [string]$fields,
+        [string]$search
     )
     
     begin {
@@ -27,7 +28,7 @@ function Get-AcceloUri {
     process {
         $UriBuilder = [UriBuilder]$uri
 
-        if (($filters) -or ($fields) -or ($limit)) {
+        if (($filters) -or ($fields) -or ($limit) -or ($search)) {
             $queryCollection = [System.Web.HttpUtility]::ParseQueryString([string]::Empty)
             if ($limit) {
                 $queryCollection.add("_limit", $limit)
@@ -37,6 +38,9 @@ function Get-AcceloUri {
             }
             if ($fields) {
                 $queryCollection.add("_fields", $fields)
+            }
+            if ($search) {
+                $queryCollection.add("_search", $search)
             }
             $UriBuilder.Query = $queryCollection.ToString()
 
@@ -183,8 +187,11 @@ function Get-AcceloCompany {
         [Parameter(ParametersetName="GetCompany")]
         [string]$filters,
 
-        [Parameter(ParametersetName="GetCompany")]
-        [string]$fields
+        [Parameter()]
+        [string]$fields,
+
+        [Parameter(ParameterSetName="GetCompany")]
+        [string]$search
     )
 
     Begin {
@@ -207,9 +214,17 @@ function Get-AcceloCompany {
                 throw "Something went wrong with the ParameterSetName."
             }
         }
-        $query = @{"_filters" = $filters; "_fields" = $fields}
+
+        $UriSplat = @{
+            Uri = $AcceloSession.BaseUri
+            Path = $UriPath
+            Limit = $limit
+            Filters = $filters
+            Fields = $Fields
+            Search = $Search
+        }
         
-        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
+        $Uri = Get-AcceloUri @UriSplat
         $company = (Invoke-Accelo -uri $uri).response
         $company
     }
@@ -222,14 +237,17 @@ function Get-AcceloRequest {
         [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetRequestById")]
         [string]$Id,
 
-        [Parameter()]
+        [Parameter(ParameterSetName="GetRequest")]
         [int]$limit,
 
-        [Parameter()]
+        [Parameter(ParameterSetName="GetRequest")]
         [string]$filters,
 
-        [Parameter()]
-        [string]$fields
+        [Parameter(ParameterSetName="GetRequest")]
+        [string]$fields,
+
+        [Parameter(ParameterSetName="GetRequest")]
+        [string]$search
     )
     
     begin {
@@ -251,7 +269,16 @@ function Get-AcceloRequest {
                 throw "Something went wrong with the ParameterSetName."
             }
         }
-        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
+        $UriSplat = @{
+            Uri = $AcceloSession.BaseUri
+            Path = $UriPath
+            Limit = $limit
+            Filters = $filters
+            Fields = $Fields
+            Search = $Search
+        }
+        
+        $Uri = Get-AcceloUri @UriSplat
         
         $requests = (Invoke-Accelo -uri $Uri).response
         $requests
@@ -392,14 +419,17 @@ function Get-AcceloAffiliation {
         [Parameter(Mandatory,ValueFromPipeline,ParameterSetName="GetAffiliationById")]
         [string]$Id,
         
-        [Parameter()]
+        [Parameter(ParameterSetName="GetAffiliation")]
         [int]$limit,
 
-        [Parameter()]
+        [Parameter(ParameterSetName="GetAffiliation")]
         [string]$filters,
 
         [Parameter()]
-        [string]$fields
+        [string]$fields,
+
+        [Parameter(ParameterSetName="GetAffiliation")]
+        [string]$search
     )
 
     Begin {
