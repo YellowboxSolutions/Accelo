@@ -34,6 +34,76 @@ Describe "Get-AcceloUri" {
         }
     }
 }
+
+Describe "Invoke-Accelo" {
+    BeforeAll{
+        Mock Invoke-WebRequest -modulename Accelo -Verifiable{
+            $content = @{
+                method = [string]$method
+                headers = [hashtable]$headers
+                uri = [string]$uri
+            }
+            $content = $content|ConvertTo-Json
+            write-verbose "Mock response content: $content"
+            $request = @{
+                content = $content
+            }
+            $request
+        }
+    }
+    
+    Context "Invoke Methods" {
+        [uri]$TestUri = "https://example.com/anything"
+        $methods = @(
+            @{ method = "GET"}
+            @{ method = "POST"}
+            @{ method = "GET"}
+            @{ method = "DELETE"}
+        )
+
+        It "Raises error when no auth." {
+            {Invoke-Accelo -uri $TestUri} | Should -Throw "No Auth info provided"
+        }
+
+        It "Uses method <method> correctly." -testcases $methods {
+            param($method)
+            $headers = @{Authorization = "TestKey"}
+            Invoke-Accelo -headers $headers -uri "https://example.com/anything" -method $method|
+            select-object -ExpandProperty method|
+            Should -be $method
+        }
+    }
+
+    Context "Invoke with queries as part of uri" {
+        $headers = @{Authorization = "TestKey"}
+        $queries = @{
+            testq1 = "testval1"
+            testq2 = "testval2"
+        }
+
+        It "Queries the correct endpoint" {
+            $uri = Invoke-Accelo -header $headers -uri "$testuri/anything" |
+            Select-Object -ExpandProperty uri
+            $uri | Should -be "$testuri/anything"
+        }
+    }
+
+    Context "Invoke with headers" {
+        $headers = @{
+            Authorization = "testtoken"
+            testq1 = "testval1"
+            testq2 = "testval2"
+        }
+
+        It "Sends header strings from parameters" {
+            $response = Invoke-Accelo -uri "$testuri/get" -headers $headers
+            foreach ($key in $headers.Keys) {
+                $response.headers.$key  | Should -Be $headers.$key
+            }
+        }
+    }
+}
+
 Describe "Connect-Accelo" {
     BeforeAll{
         Mock Invoke-WebRequest -modulename Accelo -Verifiable{
@@ -83,72 +153,6 @@ Describe "Connect-Accelo" {
     }
 }
 
-Describe "Invoke-Accelo" {
-    BeforeAll{
-        Mock Invoke-WebRequest -modulename Accelo -Verifiable{
-            $content = @{
-                method = [string]$method
-                headers = [hashtable]$headers
-                uri = [string]$uri
-            }
-            $content = $content|ConvertTo-Json
-            write-verbose "Mock response content: $content"
-            $request = @{
-                content = $content
-            }
-            $request
-        }
-    }
-    
-    Context "Invoke Methods" {
-        $methods = @(
-            @{ method = "GET"}
-            @{ method = "POST"}
-            @{ method = "GET"}
-            @{ method = "DELETE"}
-        )
-
-        It "Uses method <method> correctly." -testcases $methods {
-            param($method)
-            Invoke-Accelo -uri "$testuri/anything" -method $method|
-            select-object -ExpandProperty method|
-            Should -be $method
-        }
-    }
-
-    Context "Invoke with queries as part of uri" {
-        $queries = @{
-            testq1 = "testval1"
-            testq2 = "testval2"
-        }
-
-        It "Queries the correct endpoint" {
-            $uri = Invoke-Accelo -uri "$testuri/anything" |
-            Select-Object -ExpandProperty uri
-            $uri | Should -be "$testuri/anything"
-        }
-
-        It "Uri contains query string <query> sent as parameters" {
-            $uri = Invoke-Accelo -uri "$testuri/anything" -query $queries|
-            Select-Object -ExpandProperty uri
-            $uri | Should -belike "*testq1=testval1*"
-            $uri | Should -belike "*testq2=testval2*"
-        }
-    }
-    Context "Invoke with headers" {
-        $headers = @{
-            testq1 = "testval1"
-            testq2 = "testval2"
-        }
-
-        It "Sends header strings from parameters" {
-            $response = Invoke-Accelo -uri "$testuri/get" -headers $headers
-            foreach ($key in $headers.Keys) {
-                $response.headers.$key  | Should -Be $headers.$key
-            }
-        }
-    }
-}
 
 Describe "Get-AcceloToken" {
     Context "Get Token" {
