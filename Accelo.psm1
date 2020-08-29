@@ -96,7 +96,7 @@ function Invoke-Accelo{
         } elseif ($AcceloSession.AccessToken) {
             $invokeSplat.add('headers', @{Authorization = "Bearer $($AcceloSession.AccessToken)"})
         } else {
-            write-error "No Auth info provided"
+            Throw "No Auth info provided"
         }
         
         if ($body) {
