@@ -421,44 +421,28 @@ function Get-AcceloAffiliation {
                 throw "Something went wrong with the ParameterSetName."
             }
         }
-        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
+
+        $UriSplat = @{
+            Uri = $AcceloSession.BaseUri
+            Path = $UriPath
+            Limit = $limit
+            Filters = $filters
+            Fields = $Fields
+            Search = $Search
+        }
+        
+        $Uri = Get-AcceloUri @UriSplat
         $affiliations = (Invoke-Accelo -uri $Uri).response
         $affiliations
     }
 }
 
 function Get-AcceloRequestType {
-    [Cmdletbinding(DefaultParameterSetName="GetRequestType")]
-    param (
-        
-        [Parameter()]
-        [int]$limit,
+    [Cmdletbinding()]
 
-        [Parameter()]
-        [string]$filters,
-
-        [Parameter()]
-        [string]$fields
-    )
-
-    Begin {
-    }
-
-
-    Process {
-        $UriPath = $null
-        switch ($PSCmdlet.ParameterSetName) {
-            'GetRequestType' { 
-                $UriPath = "/api/v0/requests/types"
-            }
-
-            Default {
-                throw "Something went wrong with the ParameterSetName."
-            }
-        }
-        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
-        $RequestTypes = (Invoke-Accelo -uri $Uri).response.request_types
-        $RequestTypes
-    }
+    $UriPath = "/api/v0/requests/types"
+    $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -limit $limit -filters $filters -fields $fields
+    $RequestTypes = (Invoke-Accelo -uri $Uri).response.request_types
+    $RequestTypes
 }
 Export-ModuleMember -Function Get-AcceloUri,Connect-Accelo,Invoke-Accelo,*-AcceloToken,*-AcceloRequest*,*-AcceloCompan*,*-AcceloAffiliation*,Get-AcceloSession
