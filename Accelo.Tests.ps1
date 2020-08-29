@@ -8,7 +8,7 @@ $testpass = ConvertTo-SecureString -string "testpass" -AsPlainText -Force
 $testcred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $testuser,$testpass
 $testtoken = "testtokencontent"
 $testscope = "read(all)"
-$testBaseUri = "https://test1.api.accelo.com/api/v0"
+$testBaseUri = "https://example.com"
 $testAuthUri = "https://test1.api.accelo.com/oauth/v0"
 
 Describe "Get-AcceloUri" {
@@ -117,38 +117,35 @@ Describe "Connect-Accelo" {
             $request = @{
                 content = $content
             }
-            if ($SessionVariable) {
-                $session = @{
-                    Headers = $($content.headers)
-                    method = $($content.method)
-                }
-                $global:AcceloSession = New-Object -TypeName "Microsoft.Powershell.Commands.WebRequestSession"
-            }
             $request
         }
 
         $connectSplat = @{
-            authUri = $testAuthUri
-            baseUri = $testBaseUri
-            scope = $testscope
-            credential = $testcred
+            User = $testuser
+            Secret = $testpass
+            BaseUri = $testBaseUri
+            Scope = $testscope
         }
 
         $response = Connect-Accelo @connectSplat
         $response
     }
     Context "Connect with Username and Password" {
-        It "Hits the correct endpoint" {
-            $($response.uri) | Should -be "$testBaseUri/tokeninfo"
-        }
         It "Returns expected content from body" {
-            $($response.headers.authorization) |
-            Should -belike "Bearer *"
+            $response.BaseUri |
+            Should -be "$testBaseUri/"
         }
-        It "Sets a global session var global:AcceloSession" {
-            $global:AcceloSession|
-            Should -BeOfType Microsoft.Powershell.Commands.WebRequestSession
 
+        It "Sets the session user" {
+            $response.User | Should -be $testuser
+        }
+
+        It "Sets the session secret" {
+            $response.Secret | Should -be $testpass
+        }
+
+        It "Starts a Stopwatch" {
+            $response.ElapsedTime.IsRunning|Should -BeTrue
         }
     }
 }
