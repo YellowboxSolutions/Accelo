@@ -1,32 +1,36 @@
 $here = Split-Path -Path $MyInvocation.MyCommand.Path
 
-Get-Module Accelo | Remove-Module -Force
-Import-Module $here\Accelo.psm1
+Import-Module -force $here\Accelo.psm1
 Import-module Pester
 
 $testuser = "testuser"
 $testpass = ConvertTo-SecureString -string "testpass" -AsPlainText -Force
 $testcred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $testuser,$testpass
-$testuri = "https://example.com/sdf"
 $testtoken = "testtokencontent"
 $testscope = "read(all)"
-$testendpoint = "testend1"
 $testBaseUri = "https://test1.api.accelo.com/api/v0"
 $testAuthUri = "https://test1.api.accelo.com/oauth/v0"
 
 Describe "Get-AcceloUri" {
     Context "Get API URI" {
         It "It returns valid api uri" {
-            $uri = Get-AcceloUri -baseUri $testBaseUri -endpoint "testendpoint"
-            $uri | Should -BeOfType System.UriBuilder
-            
-            $uri.Host | Should -Be "test1.api.accelo.com"
-            $uri.Path | Should -Be "/api/v0/testendpoint"
-        }
+            $UriSplat = @{
+                Uri = "https://example.com"
+                Path = "endpoint/test"
+                Limit = 2
+                Filters = "standing(closed)"
+                Fields = "Name,Title"
+                Search = "Test Search"
+            }
+            $uri = Get-AcceloUri @UriSplat
 
-        It "Strips trailing slash in baseuri" {
-            $uri = Get-AcceloUri -baseUri "$testBaseUri/" -endpoint "testendpoint"
-            $uri.Path | Should -Be "/api/v0/testendpoint"
+            $uri | Should -BeOfType System.Uri
+            $uri.Host | Should -Be "example.com"
+            $uri.AbsolutePath | Should -Be "/endpoint/test"
+            $uri.Query | Should -BeLike "*_limit=2*"
+            $uri.Query | Should -BeLike "*_filters=standing(closed)*"
+            $uri.Query | Should -BeLike "*_fields=Name%2cTitle*"
+            $uri.Query | Should -BeLike "*_search=Test+Search*"
         }
     }
 }
