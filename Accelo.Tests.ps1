@@ -140,51 +140,86 @@ Describe "Connect-Accelo" {
     }
     
     Context "Connect with Username and Password" {
-        It "Returns expected content from body" {
-            $response.BaseUri |
-            Should -be "$testBaseUri/"
+        It "Sends proper grant_type" {
+            Assert-MockCalled Invoke-WebRequest -ModuleName Accelo -Scope Describe -ParameterFilter {($uri -like "*oauth2*") -and ($body["grant_type"] -eq "client_credentials")}
         }
 
-        It "Sets the session user" {
+        It "Returns a proper AcceloSession" {
+            $response.BaseUri | Should -be "$testBaseUri/"
             $response.User | Should -be $testuser
-        }
-
-        It "Sets the session secret" {
             $response.Secret | Should -be $testpass
-        }
-
-        It "Starts a Stopwatch" {
+            $response.AccessToken | Should -be 'testtoken'
             $response.ElapsedTime.IsRunning|Should -BeTrue
         }
+
     }
 }
 
-Describe "Get-AcceloCompanies" {
-    Context "Get unfiltered list of companies" {
-        It "Returns list of companies." {
-            $true
+Describe "Get-AcceloCompany" {
+    BeforeAll{
+        Mock Invoke-WebRequest -modulename Accelo -ParameterFilter {$uri -like "*oauth2*"} {
+            $response = @{access_token = 'testtoken'}
+            $response = @{Content = ($response|convertto-json)}
+            $response
+        }
+
+        Connect-Accelo -BaseUri "$testBaseUri/auth" -user $testuser -Secret $testpass
+    }
+
+    Context "Get all companies" {
+        Mock Invoke-WebRequest -ModuleName Accelo -ParameterFilter {$uri -like "*companies*"} {
+            $companies = @(
+                1..10 | ForEach-Object {
+                    @{ Id = $_; Name = "Name of $_"}
+                }
+            )
+            $response = @{Content = (@{response = $companies} | ConvertTo-Json)}
+            $response
+        }
+
+        $companies = Get-AcceloCompany
+
+        It "Invokes WebRequest" {
+            Assert-MockCalled Invoke-WebRequest -ModuleName Accelo -times 1
+        }
+    }
+
+    Context "Get company by Id" {
+        Mock Invoke-WebRequest -ModuleName Accelo -ParameterFilter {$uri -like "*companies/9876"} {
+            $company = @{Id = 9876; Name = "Company 9876"}
+            $response = @{Content = (@{response = $company} | ConvertTo-Json)}
+            $response
+        }
+        $company = Get-AcceloCompany -Id 9876
+
+        It "Invokes WebRequest" {
+            Assert-MockCalled Invoke-WebRequest -ModuleName Accelo
+            $company.id | Should -BeLike "*9876*"
         }
     }
     
 }
 
-Describe "Get-AcceloRequests" {
-    BeforeEach {
-        Mock Invoke-WebRequest -modulename Accelo -Verifiable {
-            $returnObject = @(
-                @{id = "1"; title = "title 1"}
-                @{id = "2"; title = "title 2"}
-            )
+Describe "Get-AcceloRequest" {
+    BeforeAll{
+        Mock Invoke-WebRequest -modulename Accelo -Verifiable{
+            $content = @{
+                method = [string]$method
+                headers = [hashtable]$headers
+                uri = [string]$uri
+            }
+            $content = $content|ConvertTo-Json
+            write-verbose "Mock response content: $content"
             $request = @{
-                content = (@{ response = $returnObject}|Convertto-json)
+                content = $content
             }
             $request
         }
     }
-    Context "Get unfiltered list of requests" {
-        It "Returns list of requests." {
-            $listOfRequests = Get-AcceloRequests -uri $testuri -token $testtoken
-            $listOfRequests | Should -HaveCount 2
+
+    Context "Get all requests" {
+        It "Invokes WebRequest" {
+            $request = Get-AcceloRequests -uri $testuri
         }
     }
 }
