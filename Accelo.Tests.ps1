@@ -106,11 +106,8 @@ Describe "Invoke-Accelo" {
 
 Describe "Connect-Accelo" {
     BeforeAll{
-        Mock Invoke-WebRequest -modulename Accelo -Verifiable{
+        Mock Invoke-WebRequest -modulename Accelo {
             $content = @{
-                method = [string]$method
-                headers = [hashtable]$headers
-                uri = [string]$uri
             }
             $content = $content|ConvertTo-Json
             write-verbose "Mock response content: $content"
@@ -118,6 +115,17 @@ Describe "Connect-Accelo" {
                 content = $content
             }
             $request
+        }
+        Mock Invoke-WebRequest -modulename Accelo -ParameterFilter {$uri -like "*oauth2*"} {
+            $response = @{
+                access_token = 'testtoken'
+                method = [string]$method
+                headers = [hashtable]$headers
+                uri = [uri]$uri
+                body = [hashtable]$body
+            }
+            $response = @{Content = ($response|convertto-json)}
+            $response
         }
 
         $connectSplat = @{
