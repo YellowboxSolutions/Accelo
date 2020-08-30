@@ -331,7 +331,7 @@ function Add-AcceloRequest {
 function Update-AcceloRequest {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory,ValueFromPipeline)]
+        [Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
         [string]$Id,
 
         [Parameter(ValueFromPipelineByPropertyName)]
@@ -368,48 +368,50 @@ function Update-AcceloRequest {
         [Parameter()]
         [string]$fields
     )
-    $UriPath = "api/v0/requests/$Id"
-    $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -fields $fields -filters $filters
+    process {
+        $UriPath = "api/v0/requests/$Id"
+        $Uri = Get-AcceloUri -Uri $AcceloSession.BaseUri -path $UriPath -fields $fields -filters $filters
 
-    $RequestSplat = @{}
+        $RequestSplat = @{}
 
-    if ($Title) { 
-        $RequestSplat.add("title", $Title)
-    }
+        if ($Title) { 
+            $RequestSplat.add("title", $Title)
+        }
 
-    if ($Body) { 
-        $RequestSplat.add("body", $Body)
-    }
+        if ($Body) { 
+            $RequestSplat.add("body", $Body)
+        }
 
-    if ($TypeId) { 
-        $RequestSplat.add("type_id", $TypeId)
+        if ($TypeId) { 
+            $RequestSplat.add("type_id", $TypeId)
+        }
+        
+        if ($LeadId) { 
+            $RequestSplat.add("lead_id", $LeadId)
+        }
+        
+        if ($AffiliationId) { 
+            $RequestSplat.add("affiliation_id", $AffiliationId)
+        }
+        
+        if ($PriorityId) { 
+            $RequestSplat.add("priority_id", $PriorityId)
+        }
+        
+        if ($Source) { 
+            $RequestSplat.add("source", $Source)
+        }
+        
+        if ($Standing) { 
+            $RequestSplat.add("standing", $Standing)
+        }
+        
+        if ($ClaimerId) { 
+            $RequestSplat.add("claimer_id", $ClaimerId)
+        }
+        $response = (Invoke-Accelo -uri $Uri -method "PUT" -contenttype "application/x-www-form-urlencoded" -body $RequestSplat).response
+        $response
     }
-    
-    if ($LeadId) { 
-        $RequestSplat.add("lead_id", $LeadId)
-    }
-    
-    if ($AffiliationId) { 
-        $RequestSplat.add("affiliation_id", $AffiliationId)
-    }
-    
-    if ($PriorityId) { 
-        $RequestSplat.add("priority_id", $PriorityId)
-    }
-    
-    if ($Source) { 
-        $RequestSplat.add("source", $Source)
-    }
-    
-    if ($Standing) { 
-        $RequestSplat.add("standing", $Standing)
-    }
-    
-    if ($ClaimerId) { 
-        $RequestSplat.add("claimer_id", $ClaimerId)
-    }
-    $response = (Invoke-Accelo -uri $Uri -method "PUT" -contenttype "application/x-www-form-urlencoded" -body $RequestSplat).response
-    $response
 }
 
 function Get-AcceloAffiliation {
