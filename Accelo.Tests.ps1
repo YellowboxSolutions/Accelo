@@ -138,6 +138,7 @@ Describe "Connect-Accelo" {
         $response = Connect-Accelo @connectSplat
         $response
     }
+    
     Context "Connect with Username and Password" {
         It "Returns expected content from body" {
             $response.BaseUri |
@@ -164,6 +165,7 @@ Describe "Get-AcceloCompanies" {
             $true
         }
     }
+    
 }
 
 Describe "Get-AcceloRequests" {
@@ -178,7 +180,6 @@ Describe "Get-AcceloRequests" {
             }
             $request
         }
-        
     }
     Context "Get unfiltered list of requests" {
         It "Returns list of requests." {
