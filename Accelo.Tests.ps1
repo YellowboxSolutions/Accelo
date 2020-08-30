@@ -193,7 +193,7 @@ Describe "Get-AcceloCompany" {
         $company = Get-AcceloCompany -Id 9876
 
         It "Invokes WebRequest" {
-            Assert-MockCalled Invoke-WebRequest -ModuleName Accelo
+            Assert-MockCalled Invoke-WebRequest -ModuleName Accelo -ParameterFilter {$uri -like "*companies/9876*"}
             $company.id | Should -BeLike "*9876*"
         }
     }
