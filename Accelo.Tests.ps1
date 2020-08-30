@@ -245,16 +245,22 @@ Describe "Get-AcceloRequest" {
 }
 
 Describe "Add-AcceloRequest" {
-    BeforeEach {
-        Mock Invoke-WebRequest -modulename Accelo -Verifiable {
+    BeforeAll {
+        Mock Invoke-WebRequest -modulename Accelo {
             $request = @{
                 content = (@{ response = $body}|Convertto-json)
             }
             $request
         }
-        
+
+        Mock Invoke-WebRequest -modulename Accelo -ParameterFilter {$uri -like "*oauth2*"} {
+            $response = @{access_token = 'testtoken'}
+            $response = @{Content = ($response|convertto-json)}
+            $response
+        }
+
+        Connect-Accelo -BaseUri "$testBaseUri/auth" -user $testuser -Secret $testpass
     }
-    $token = "testtoken"
 
     Context "Add a new request" {
         $testRequestSplat = @{
@@ -263,10 +269,39 @@ Describe "Add-AcceloRequest" {
             affiliationId = "88"
             body = "Test body"
         }
+        $request = Add-AcceloRequest @testRequestSplat
+
         It "Should return a valid request" {
-            Add-AcceloRequest -uri $testuri -token $token @testRequestSplat|
-            Select-Object -ExpandProperty title|
+            $request | Select-Object -ExpandProperty title|
             should -be "$($testRequestSplat.title)"
+        }
+    }
+}
+
+Describe "Update-AcceloRequest" {
+    BeforeAll {
+        Mock Invoke-WebRequest -modulename Accelo -ParameterFilter {$uri -like "*oauth2*"} {
+            $response = @{access_token = 'testtoken'}
+            $response = @{Content = ($response|convertto-json)}
+            $response
+        }
+
+        Connect-Accelo -BaseUri "$testBaseUri/auth" -user $testuser -Secret $testpass
+    }
+
+    Context "Update a request" {
+        Mock Invoke-WebRequest -modulename Accelo -ParameterFilter {($uri -like "*requests*") -and ($method -eq "PUT")} {
+            $request = @{
+                content = (@{ response = @{Id = 9876; Standing = "closed"}}|Convertto-json)
+            }
+            $request
+        }
+
+        $request = Update-AcceloRequest -id 9876 -standing pending
+
+        It "Returns an updated request" {
+           $request.Id | Should -be 9876 
+           $request.Standing | Should -be "Closed" 
         }
     }
 }
