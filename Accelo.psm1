@@ -105,7 +105,10 @@ function Invoke-Accelo{
         try{
             $invocation = Invoke-WebRequest @invokeSplat
         } catch {
-            write-error "Accelo request broke: $_"
+            write-error "Invoking Accelo failed: $_`r`n"
+                "-Method: $($invokeSplat[`"method`"])`r`n"
+                "-Uri: $($invokeSplat[`"uri`"])`r`n"
+                "-Body: $($invokeSplat[`"body`"] | ConvertTo-Json)"
             return
         }
         write-verbose "Request: $($invokeSplat|convertto-json)"
