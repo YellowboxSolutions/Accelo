@@ -202,24 +202,44 @@ Describe "Get-AcceloCompany" {
 
 Describe "Get-AcceloRequest" {
     BeforeAll{
-        Mock Invoke-WebRequest -modulename Accelo -Verifiable{
-            $content = @{
-                method = [string]$method
-                headers = [hashtable]$headers
-                uri = [string]$uri
-            }
-            $content = $content|ConvertTo-Json
-            write-verbose "Mock response content: $content"
-            $request = @{
-                content = $content
-            }
-            $request
+        Mock Invoke-WebRequest -modulename Accelo -ParameterFilter {$uri -like "*oauth2*"} {
+            $response = @{access_token = 'testtoken'}
+            $response = @{Content = ($response|convertto-json)}
+            $response
         }
+
+        Connect-Accelo -BaseUri "$testBaseUri/auth" -user $testuser -Secret $testpass
     }
 
     Context "Get all requests" {
+        Mock Invoke-WebRequest -ModuleName Accelo -ParameterFilter {$uri -like "*requests*"} {
+            $requests = @(
+                1..10 | ForEach-Object {
+                    @{ Id = $_; Name = "Name of $_"}
+                }
+            )
+            $response = @{Content = (@{response = $requests} | ConvertTo-Json)}
+            $response
+        }
+
+        $requests = Get-AcceloRequest
+
         It "Invokes WebRequest" {
-            $request = Get-AcceloRequests -uri $testuri
+            Assert-MockCalled Invoke-WebRequest -ModuleName Accelo -ParameterFilter {$uri -like "*requests*"} -times 1
+        }
+    }
+
+    Context "Get request by Id" {
+        Mock Invoke-WebRequest -ModuleName Accelo -ParameterFilter {$uri -like "*requests/9876"} {
+            $request = @{Id = 9876; Name = "Request 9876"}
+            $response = @{Content = (@{response = $request} | ConvertTo-Json)}
+            $response
+        }
+        $request = Get-AcceloRequest -Id 9876
+
+        It "Invokes WebRequest" {
+            Assert-MockCalled Invoke-WebRequest -ModuleName Accelo -ParameterFilter {$uri -like "*requests/9876"}
+            $request.id | Should -BeLike "*9876*"
         }
     }
 }
