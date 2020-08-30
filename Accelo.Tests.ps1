@@ -41,7 +41,7 @@ Describe "Invoke-Accelo" {
             $content = @{
                 method = [string]$method
                 headers = [hashtable]$headers
-                uri = [string]$uri
+                uri = [uri]$uri
             }
             $content = $content|ConvertTo-Json
             write-verbose "Mock response content: $content"
