@@ -102,16 +102,17 @@ function Invoke-Accelo{
         if ($body) {
             $invokeSplat.add('body', $body)
         }
-        try{
+
+        try {
             $invocation = Invoke-WebRequest @invokeSplat
+            $response = $invocation.Content|ConvertFrom-Json
+            $response
         } catch {
-            write-error "Accelo request broke: $_"
-            return
+            Write-Error "$($_.TargetObject.method) $($_.TargetObject.Address) failed: $_"
+        } finally {
+            write-verbose "Request: $($invokeSplat|convertto-json)"
+            write-verbose "Response: $invocation"
         }
-        write-verbose "Request: $($invokeSplat|convertto-json)"
-        write-verbose "Response: $invocation"
-        $response = $invocation.Content|ConvertFrom-Json
-        $response
     }
 
     End {
